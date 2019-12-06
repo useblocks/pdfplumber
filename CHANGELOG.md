@@ -4,6 +4,64 @@ All notable changes to this project will be documented in this file. Currently g
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
+## [0.5.14] — 2019-10-06
+### Fixed
+- Fix sorting bug in `page.extract_table()`
+- Fix support for password-protected PDFs (PR #138)
+
+## [0.5.13] — 2019-08-29
+## Fixed
+- Fixed PDF object resolution for rotation (PR #136)
+
+## [0.5.12] — 2019-04-14
+## Added
+- `cdecimal` support for Python 2
+- Support for password-protected PDFs
+
+## [0.5.11] — 2018-11-13
+### Added
+- Caching for `.decimalize()` method
+
+## Changed
+- Upgrade to `pdfminer.six==20181108`
+- Make whitespace checking more robust (PR #88)
+
+### Fixed
+- Fix issue #75 (`.to_image()` custom arguments)
+- Fix issue raised in PR #77 (PDFObjRef resolution), and general class of problems
+- Fix issue #90, and general class of problems, by explicitly typecasting each kind of PDF Object
+
+## [0.5.10] — 2018-08-03
+### Fixed
+- Fix bug in which, when calling get_page_image(...), the alpha channel could make the whole page black out.
+
+## [0.5.9] — 2018-07-10
+### Fixed
+- Fix issue #67, in which bool-type metadata were handled incorrectly
+
+## [0.5.8] — 2018-03-06
+### Fixed
+- Fix issue #53, in which non-decimalize-able (non_)stroking_color properties were raising errors.
+
+## [0.5.7] — 2018-01-20
+### Added
+- `.travis.yml`, but failing on `.to_image()`
+
+### Changed
+- Move from defunct `pycrypto` to `pycryptodome`
+- Update `pdfminer.six` to `20170720`
+
+## [0.5.6] — 2017-11-21
+### Fixed
+- Fix issue #41, in which PDF-object-referenced cropboxes/mediaboxes weren't being fully resolved.
+
+## [0.5.5] — 2017-05-10
+### Added
+- Access to `__version__` from main namespace
+
+### Fixed
+- Fix issue #33, by checking `decode_text`'s argument type
+
 ## [0.5.4] — 2017-04-27
 ### Fixed
 - Pin `pdfminer.six` to version `20151013` (for now), fixing incompatibility

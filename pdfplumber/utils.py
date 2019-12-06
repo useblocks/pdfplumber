@@ -1,9 +1,22 @@
 from pdfminer.utils import PDFDocEncoding
-from decimal import Decimal, ROUND_HALF_UP
+from pdfminer.psparser import PSLiteral
+try:
+    from cdecimal import Decimal, ROUND_HALF_UP
+except ImportError:
+    from decimal import Decimal, ROUND_HALF_UP
 import numbers
 from operator import itemgetter
 import itertools
 import six
+
+if six.PY3:
+    from functools import lru_cache as cache
+else:
+    # Python 2 has no lru_cache, so defining as a no-op
+    def cache(**kwargs):
+        def decorator(fn):
+            return fn
+        return decorator
 
 DEFAULT_X_TOLERANCE = 3
 DEFAULT_Y_TOLERANCE = 3
@@ -62,22 +75,30 @@ def decode_text(s):
     Decodes a PDFDocEncoding string to Unicode.
     Adds py3 compatability to pdfminer's version.
     """
-    if s.startswith(b'\xfe\xff'):
+    if type(s) == bytes and s.startswith(b'\xfe\xff'):
         return six.text_type(s[2:], 'utf-16be', 'ignore')
     else:
         ords = (ord(c) if type(c) == str else c for c in s)
         return ''.join(PDFDocEncoding[o] for o in ords)
 
-def decimalize(v, q=None):
+def decode_psl_list(_list):
+    return [ decode_text(value.name) if isinstance(value, PSLiteral) else value
+        for value in _list ]
+
+@cache(maxsize = int(10e4))
+def _decimalize(v, q = None):
     # If already a decimal, just return itself
     if isinstance(v, Decimal):
         return v
+
     # If tuple/list passed, bulk-convert
     elif isinstance(v, (tuple, list)):
         return type(v)(decimalize(x, q) for x in v)
+
     # Convert int-like
     elif isinstance(v, numbers.Integral):
         return Decimal(int(v))
+
     # Convert float-like
     elif isinstance(v, numbers.Real):
         if q != None:
@@ -87,6 +108,13 @@ def decimalize(v, q=None):
             return Decimal(repr(v))
     else:
         raise ValueError("Cannot convert {0} to Decimal.".format(v))
+
+def decimalize(v, q = None):
+    # If tuple/list passed, bulk-convert
+    if isinstance(v, (tuple, list)):
+        return type(v)(decimalize(x, q) for x in v)
+    else:
+        return _decimalize(v, q)
 
 def is_dataframe(collection):
     cls = collection.__class__
@@ -163,7 +191,7 @@ def extract_words(chars,
         current_word = []
 
         for char in chars_sorted:
-            if not keep_blank_chars and get_text(char) == " ":
+            if not keep_blank_chars and get_text(char).isspace():
                 if len(current_word) > 0:
                     words.append(current_word)
                     current_word = []

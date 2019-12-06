@@ -77,10 +77,69 @@ class Test(unittest.TestCase):
         pdf = pdfplumber.from_path(
             os.path.join(HERE, "pdfs/cupertino_usd_4-6-16.pdf")
         )
-        len(pdf.objects)
+        assert len(pdf.objects)
 
     def test_issue_21(self):
         pdf = pdfplumber.from_path(
             os.path.join(HERE, "pdfs/150109DSP-Milw-505-90D.pdf")
         )
-        len(pdf.objects)
+        assert len(pdf.objects)
+
+    def test_issue_33(self):
+        pdf = pdfplumber.from_path(
+            os.path.join(HERE, "pdfs/issue-33-lorem-ipsum.pdf")
+        )
+        assert len(pdf.metadata.keys())
+        
+    def test_issue_53(self):
+        pdf = pdfplumber.from_path(
+            os.path.join(HERE, "pdfs/issue-53-example.pdf")
+        )
+        assert len(pdf.objects)
+
+    def test_issue_67(self):
+        pdf = pdfplumber.from_path(
+            os.path.join(HERE, "pdfs/issue-67-example.pdf")
+        )
+        assert len(pdf.metadata.keys())
+
+    def test_pr_77(self):
+        # via https://github.com/jsvine/pdfplumber/pull/77
+        path = os.path.join(HERE, "pdfs/pr-77-example.pdf")
+        with pdfplumber.open(path) as pdf:
+            first_page = pdf.pages[0]
+            first_page.objects
+
+    def test_pr_88(self):
+        # via https://github.com/jsvine/pdfplumber/pull/88
+        path = os.path.join(HERE, "pdfs/pr-88-example.pdf")
+        with pdfplumber.open(path) as pdf:
+            page = pdf.pages[0]
+            words = page.extract_words()
+            assert len(words) == 25
+
+    def test_issue_90(self):
+        path = os.path.join(HERE, "pdfs/issue-90-example.pdf")
+        with pdfplumber.open(path) as pdf:
+            page = pdf.pages[0]
+            words = page.extract_words()
+
+    def test_pr_136(self):
+        path = os.path.join(HERE, "pdfs/pr-136-example.pdf")
+        with pdfplumber.open(path) as pdf:
+            page = pdf.pages[0]
+            words = page.extract_words()
+
+    def test_pr_138(self):
+        path = os.path.join(HERE, "pdfs/pr-138-example.pdf")
+        with pdfplumber.open(path) as pdf:
+            page = pdf.pages[0]
+            assert len(page.chars) == 5140
+
+    def test_issue_140(self):
+        path = os.path.join(HERE, "pdfs/issue-140-example.pdf")
+        with pdfplumber.open(path) as pdf:
+            page = pdf.pages[0]
+            cropped_page = page.crop((0, 0, page.width, 122))
+            assert len(cropped_page.extract_table()) == 5
+

@@ -1,4 +1,4 @@
-# PDFPlumber `v0.5.4`
+# PDFPlumber `v0.5.14`
 
 Plumb a PDF for detailed information about each text character, rectangle, and line. Plus: Table extraction and visual debugging.
 
@@ -13,17 +13,16 @@ Currently [tested](tests/) on [Python 2.7, 3.1, 3.4, 3.5, and 3.6](tox.ini).
 - [Python library](#python-library)
 - [Visual debugging](#visual-debugging)
 - [Extracting tables](#extracting-tables)
+- [Extracting form values](#extracting-form-values)
 - [Demonstrations](#demonstrations)
 - [Acknowledgments / Contributors](#acknowledgments--contributors)
+- [Contributing](#contributing)
 
 ## Installation
 
 ```sh
 pip install pdfplumber
 ```
-
-To use `pdfplumber`'s visual-debugging tools, you'll also need to have [`ImageMagick`](https://www.imagemagick.org/) installed on your computer. [Installation instructions here](http://docs.wand-py.org/en/latest/guide/install.html#install-imagemagick-debian).
-
 ## Command line interface
 
 ### Basic example
@@ -63,6 +62,8 @@ with pdfplumber.open("path/to/file.pdf") as pdf:
 - `pdfplumber.load(file_like_object)`
 
 Both methods return an instance of the `pdfplumber.PDF` class.
+
+To load a password-protected PDF, pass the `password` keyword argument, e.g., `pdfplumber.open("file.pdf", password = "test")`.
 
 ### The `pdfplumber.PDF` class
 
@@ -185,12 +186,18 @@ Additionally, both `pdfplumber.PDF` and `pdfplumber.Page` provide access to two 
 
 ## Visual debugging
 
+__Note:__ To use `pdfplumber`'s visual-debugging tools, you'll also need to have two additional pieces of software installed on your computer:
+
+- [`ImageMagick`](https://www.imagemagick.org/). [Installation instructions here](http://docs.wand-py.org/en/latest/guide/install.html#install-imagemagick-debian).
+- [`ghostscript`](https://www.ghostscript.com). [Installation instructions here](https://www.ghostscript.com/doc/9.21/Install.htm), or simply `apt install ghostscript` (Ubuntu) / `brew install ghostscript` (Mac).
+
+
 ### Creating a `PageImage` with `.to_image()`
 
 To turn any page (including cropped pages) into an `PageImage` object, call `my_page.to_image()`. You can optionally pass a `resolution={integer}` keyword argument, which defaults to 72. E.g.:
 
 ```python
-im = my_pdf.page[0].to_image(resolution=150)
+im = my_pdf.pages[0].to_image(resolution=150)
 ```
 
 `PageImage` objects play nicely with IPython/Jupyter notebooks; they automatically render as cell outputs. For example:
@@ -219,6 +226,22 @@ You can pass explicit coordinates or any `pdfplumber` PDF object (e.g., char, li
 |`im.draw_circle(center_or_obj, radius=5, fill={color}, stroke={color})`| `im.draw_circles(list_of_circles, **kwargs)`| Draws a circle at `(x, y)` coordinate or at the center of a `char`, `rect`, etc.|
 
 Note: The methods above are built on Pillow's [`ImageDraw` methods](http://pillow.readthedocs.io/en/latest/reference/ImageDraw.html), but the parameters have been tweaked for consistency with SVG's `fill`/`stroke`/`stroke_width` nomenclature.
+
+### Troubleshooting ImageMagick on Debian-based systems
+
+If you're using `pdfplumber` on a Debian-based system and encounter a `PolicyError`, you may be able to fix it by changing the following line in `/etc/ImageMagick-6/policy.xml` from this:
+
+```xml
+<policy domain="coder" rights="none" pattern="PDF" />
+```
+
+... to this:
+
+```xml
+<policy domain="coder" rights="read|write" pattern="PDF" />
+```
+
+(More details about `policy.xml` [available here](https://imagemagick.org/script/security-policy.php).)
 
 ## Extracting tables
 
@@ -281,7 +304,7 @@ By default, `extract_tables` uses the page's vertical and horizontal lines (or r
 |`"vertical_strategy"`| Either `"lines"`, `"lines_strict"`, `"text"`, or `"explicit"`. See explanation below.|
 |`"horizontal_strategy"`| Either `"lines"`, `"lines_strict"`, `"text"`, or `"explicit"`. See explanation below.|
 |`"explicit_vertical_lines"`| A list of vertical lines that explicitly demarcate cells in the table. Can be used in combination with any of the strategies above. Items in the list should be either numbers — indicating the `x` coordinate of a line the full height of the page — or a dictionary describing the line, with at least the following keys: `x`, `top`, `bottom`. |
-|`"explicit_horizontal_lines"`| A list of vertical lines that explicitly demarcate cells in the table. Can be used in combination with any of the strategies above. Items in the list should be either numbers — indicating the `y` coordinate of a line the full height of the page — or a dictionary describing the line, with at least the following keys: `top`, `x0`, `x1`.|
+|`"explicit_horizontal_lines"`| A list of horizontal lines that explicitly demarcate cells in the table. Can be used in combination with any of the strategies above. Items in the list should be either numbers — indicating the `y` coordinate of a line the full height of the page — or a dictionary describing the line, with at least the following keys: `top`, `x0`, `x1`.|
 |`"snap_tolerance"`| Parallel lines within `snap_tolerance` pixels will be "snapped" to the same horizontal or vertical position.|
 |`"join_tolerance"`| Line segments on the same infinite line, and whose ends are within `join_tolerance` of one another, will be "joined" into a single line segment.|
 |`"edge_min_length"`| Edges shorter than `edge_min_length` will be discarded before attempting to reconstruct the table.|
@@ -289,7 +312,7 @@ By default, `extract_tables` uses the page's vertical and horizontal lines (or r
 |`"min_words_horizontal"`| When using `"horizontal_strategy": "text"`, at least `min_words_horizontal` words must share the same alignment.|
 |`"keep_blank_chars"`| When using the `text` strategy, consider `" "` chars to be *parts* of words and not word-separators.|
 |`"text_tolerance"`, `"text_x_tolerance"`, `"text_y_tolerance"`| When the `text` strategy searches for words, it will expect the individual letters in each word to be no more than `text_tolerance` pixels apart.|
-|`"intersection_tolerance"`, `"intersection_x_tolerance"`, `"intersection_y_tolerance"`| When combining edges into cells, orthogonal edges most be within `intersection_tolerance` pixels to be considered intersecting.|
+|`"intersection_tolerance"`, `"intersection_x_tolerance"`, `"intersection_y_tolerance"`| When combining edges into cells, orthogonal edges must be within `intersection_tolerance` pixels to be considered intersecting.|
 
 ### Table-extraction strategies
 
@@ -309,6 +332,28 @@ Both `vertical_strategy` and `horizontal_strategy` accept the following options:
 - Table extraction for `pdfplumber` was radically redesigned for `v0.5.0`, and introduced breaking changes.
 
 
+## Extracting form values
+
+Sometimes PDF files can contain forms that include inputs that people can fill out and save. While values in form fields appear like other text in a PDF file, form data is handled differently. If you want the gory details, see page 671 of this [specification](https://www.adobe.com/content/dam/acom/en/devnet/pdf/pdf_reference_archive/pdf_reference_1-7.pdf).
+
+`pdfplumber` doesn't have an interface for working with form data, but you can access it using `pdfplumber`'s wrappers around `pdfminer`.
+
+For example, this snippet will retrieve form field names and values and store them in a dictionary. You may have to modify this script to handle cases like nested fields (see page 676 of the specification).
+
+```python
+pdf = pdfplumber.open("document_with_form.pdf")
+
+fields = pdf.doc.catalog["AcroForm"].resolve()["Fields"]
+
+form_data = {}
+
+for field in fields:
+    field_name = field.resolve()["T"]
+    field_value = field.resolve()["V"]
+    form_data[field_name] = field_value
+```
+
+
 ## Demonstrations
 
 - [Using `extract_table` on a California Worker Adjustment and Retraining Notification (WARN) report](examples/notebooks/extract-table-ca-warn-report.ipynb). Demonstrates basic visual debugging and table extraction.
@@ -323,8 +368,13 @@ Many thanks to the following users who've contributed ideas, features, and fixes
 - [Jacob Fenton](https://github.com/jsfenfen)
 - [Dan Nguyen](https://github.com/dannguyen)
 - [Jeff Barrera](https://github.com/jeffbarrera)
-- [Bob Lannon](https://github.com/boblannon-picwell)
+- [Bob Lannon](https://github.com/boblannon)
+- [Dustin Tindall](https://github.com/dustindall)
+- [@yevgnen](https://github.com/Yevgnen)
+- [@meldonization](https://github.com/meldonization)
+- [Oisín Moran](https://github.com/OisinMoran)
+- [Samkit Jain](https://github.com/samkit-jain)
 
-## Feedback
+## Contributing
 
-Issues and pull requests welcome.
+Pull requests are welcome, but please submit an issue (or email jsvine@gmail.com) before submitting one, as the library is in active development. The current development branch is `v0.6.0`.

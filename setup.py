@@ -10,9 +10,9 @@ with open(os.path.join(HERE, NAME, '_version.py')) as f:
 
 base_reqs = [
     "chardet",
-    "pycrypto",
+    "pycryptodome",
     "unicodecsv>=0.14.1",
-    "pdfminer.six==20151013",
+    "pdfminer.six==20181108",
     "pillow>=3.0.0",
     "wand"
 ]

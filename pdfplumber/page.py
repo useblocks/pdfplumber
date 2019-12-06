@@ -3,6 +3,7 @@ from .table import TableFinder
 from .container import Container
 from copy import copy
 
+from pdfminer.pdftypes import resolve_all
 from six import string_types
 import re
 lt_pat = re.compile(r"^LT")
@@ -15,26 +16,31 @@ class Page(Container):
         self.pdf = pdf
         self.page_obj = page_obj
         self.page_number = page_number
-        self.rotation = self.page_obj.attrs.get("Rotate", 0) % 360
+        _rotation = self.decimalize(resolve_all(self.page_obj.attrs.get("Rotate", 0)))
+        self.rotation =  _rotation % 360
         self.page_obj.rotate = self.rotation
         self.initial_doctop = self.decimalize(initial_doctop)
 
-        cropbox = page_obj.attrs.get("CropBox", page_obj.attrs.get("MediaBox"))
-        self.cropbox = self.decimalize(cropbox)
+        cropbox = page_obj.attrs.get("CropBox")
+        mediabox = page_obj.attrs.get("MediaBox")
+
+        self.cropbox = self.decimalize(resolve_all(cropbox)) if cropbox is not None else None
+        self.mediabox = self.decimalize(resolve_all(mediabox) or self.cropbox)
+        m = self.mediabox
 
         if self.rotation in [ 90, 270 ]:
             self.bbox = self.decimalize((
-                min(cropbox[1], cropbox[3]),
-                min(cropbox[0], cropbox[2]),
-                max(cropbox[1], cropbox[3]),
-                max(cropbox[0], cropbox[2]),
+                min(m[1], m[3]),
+                min(m[0], m[2]),
+                max(m[1], m[3]),
+                max(m[0], m[2]),
             ))
         else:
             self.bbox = self.decimalize((
-                min(cropbox[0], cropbox[2]),
-                min(cropbox[1], cropbox[3]),
-                max(cropbox[0], cropbox[2]),
-                max(cropbox[1], cropbox[3]),
+                min(m[0], m[2]),
+                min(m[1], m[3]),
+                max(m[0], m[2]),
+                max(m[1], m[3]),
             ))
 
     def decimalize(self, x):
@@ -83,16 +89,54 @@ class Page(Container):
             "groups",
             "stream",
             "colorspace",
+            "ncs",
+            "graphicstate",
             "imagemask",
             "pts",
         ]
 
-        NON_DECIMALIZE = [
-            "fontname", "name", "upright",
-        ]
+        noop = lambda x: x
+        str_conv = lambda x: str(x or "")
+
+        CONVERSIONS = {
+            # Decimals
+            "adv": d,
+            "height": d,
+            "linewidth": d,
+            "pts": d,
+            "size": d,
+            "srcsize": d,
+            "width": d,
+            "x0": d,
+            "x1": d,
+            "y0": d,
+            "y1": d,
+
+            # Integer
+            "bits": int,
+            "upright": int,
+
+            # Strings
+            "font": str_conv,
+            "fontname": str_conv,
+            "imagemask": noop,
+            "name": str_conv,
+            "object_type": str_conv,
+            "text": str_conv,
+
+            # No conversion
+            "colorspace": noop,
+            "evenodd": noop,
+            "fill": noop,
+            "non_stroking_color": noop,
+            "path": noop,
+            "stream": noop,
+            "stroke": noop,
+            "stroking_color": noop,
+        }
 
         def process_object(obj):
-            attr = dict((k, (v if k in NON_DECIMALIZE else d(v)))
+            attr = dict((k, CONVERSIONS[k](resolve_all(v)))
                 for k, v in obj.__dict__.items()
                     if k not in IGNORE)
 
@@ -137,7 +181,7 @@ class Page(Container):
     def extract_table(self, table_settings={}):
         tables = self.find_tables(table_settings)
         # Return the largest table, as measured by number of cells.
-        sorter = lambda x: (len(x.cells), x.bbox[1], x.bbox[0])
+        sorter = lambda x: (-len(x.cells), x.bbox[1], x.bbox[0])
         largest = list(sorted(tables, key=sorter))[0]
         return largest.extract()
 
@@ -156,7 +200,8 @@ class Page(Container):
 
         return utils.extract_words(self.chars,
             x_tolerance=x_tolerance,
-            y_tolerance=y_tolerance)
+            y_tolerance=y_tolerance,
+            keep_blank_chars=keep_blank_chars)
 
     def crop(self, bbox):
         class CroppedPage(DerivedPage):
@@ -203,13 +248,15 @@ class Page(Container):
         filtered.bbox = self.bbox
         return filtered
 
-    def to_image(self, resolution=None):
+    def to_image(self, **conversion_kwargs):
         """
         For conversion_kwargs, see http://docs.wand-py.org/en/latest/wand/image.html#wand.image.Image
         """
         from .display import PageImage, DEFAULT_RESOLUTION
-        res = resolution or DEFAULT_RESOLUTION
-        return PageImage(self, resolution=res)
+        kwargs = dict(conversion_kwargs)
+        if "resolution" not in conversion_kwargs:
+            kwargs["resolution"] = DEFAULT_RESOLUTION
+        return PageImage(self, **kwargs)
 
 class DerivedPage(Page):
     is_original = False
