@@ -258,6 +258,24 @@ def extract_words(chars,
 
     return words
 
+# new function used to extract chars with the meta data, defined by useblocks
+
+def extract_sorted_line_char(chars,
+    x_tolerance=DEFAULT_X_TOLERANCE,
+    y_tolerance=DEFAULT_Y_TOLERANCE):
+
+    if len(chars) == 0:
+        return None
+
+    chars = to_list(chars)
+
+    # Change doctop to center to increase the precision of the line cluster by Peter
+    # doctop_clusters = cluster_objects(chars, "doctop", y_tolerance)
+
+    center_clusters = cluster_objects(chars, lambda x: x['doctop'] + (x['height']/2), y_tolerance)
+    return center_clusters
+
+
 def extract_text(chars,
     x_tolerance=DEFAULT_X_TOLERANCE,
     y_tolerance=DEFAULT_Y_TOLERANCE):

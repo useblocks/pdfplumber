@@ -191,6 +191,16 @@ class Page(Container):
             x_tolerance=x_tolerance,
             y_tolerance=y_tolerance)
 
+    # new function used to extract chars with the meta data, defined by useblocks
+    def extract_sorted_line_char(self,
+        x_tolerance=utils.DEFAULT_X_TOLERANCE,
+        y_tolerance=utils.DEFAULT_Y_TOLERANCE):
+
+        return utils.extract_sorted_line_char(self.chars,
+            x_tolerance=x_tolerance,
+            y_tolerance=y_tolerance)
+
+
     def extract_words(self,
         x_tolerance=utils.DEFAULT_X_TOLERANCE,
         y_tolerance=utils.DEFAULT_Y_TOLERANCE,
