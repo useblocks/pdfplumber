@@ -266,10 +266,17 @@ def extract_text(chars,
         return None
 
     chars = to_list(chars)
-    doctop_clusters = cluster_objects(chars, "doctop", y_tolerance)
+
+    # Change doctop to center to increase the precision of the line cluster by Peter
+    # doctop_clusters = cluster_objects(chars, "doctop", y_tolerance)
+
+    center_clusters = cluster_objects(chars, lambda x: x['doctop'] + (x['height']/2), y_tolerance)
+
+    # lines = (collate_line(line_chars, x_tolerance)
+    #     for line_chars in doctop_clusters)
 
     lines = (collate_line(line_chars, x_tolerance)
-        for line_chars in doctop_clusters)
+        for line_chars in center_clusters)
 
     coll = "\n".join(lines)
     return coll
